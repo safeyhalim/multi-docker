@@ -1,0 +1,54 @@
+# Docker compose file for the development environment
+version: '3'
+services:
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+  redis:
+    image: 'redis:latest'
+  nginx:
+    depends_on: # avoids potential dependencies problems when running docker-compose (making sure that the api and the react app servers are running first before running nginx)
+      - api
+      - client
+    restart: always # no matter what, nginx should always be up and running
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80' # map port 3050 on the local machine (the development machine) to port 80 on the container (because the nginx container is listeing to port 80)
+  api:
+    depends_on: 
+      - postgres # Makes sure that postgres is up and running first
+    build:
+      dockerfile: Dockerfile.dev # We specify only the name here
+      context: ./server # the build context specifies where to look for the dockerfile
+    volumes:
+      - /app/node_modules # Do not mount the node_modules folder inside the container to anything outside the container, i.e. leave it as it is. (this line is an exception of the next line)
+      - ./server:/app # Mount everything in the server folder to the app folder inside the container (so that we don't have to re-build the image everytime we make a code change. The exception to this is for the folder node_modules as specified in the previous line, it's an exception as it's not mounted) 
+    environment:
+      - REDIS_HOST=redis # The value is "redis" which is the name of the redis service here in the docker-compose file above
+      - REDIS_PORT=6379 # The default port of redis
+      - PGUSER=postgres # The default user of postgres
+      - PGHOST=postgres # The name of postgres service 
+      - PGDATABASE=postgres # The default database name
+      - PGPASSWORD=postgres_password # The default password of postgres
+      - PGPORT=5432 # The default postgres port
+  client:
+    stdin_open: true # Because there is a bug in the react app which makes it exit immediately after starting with Docker compose (we keep it running by opening the standard input)
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+     - REDIS_HOST=redis
+     - REDIS_PORT=6379

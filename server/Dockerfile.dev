@@ -1,0 +1,7 @@
+FROM node:alpine
+WORKDIR "/app"
+COPY ./package.json ./
+RUN npm install
+COPY . .
+# the dev here refers to to the dev script in package.json which is set to the nodemon package which reloads the project whenever any of the source code files changes. We want to make use of that in the development environment.
+CMD ["npm", "run", "dev"]
