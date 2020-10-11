@@ -11,7 +11,7 @@ services:
 
 # Note: the build context here is ./client (because the Dockerfile.dev exists in the nested client folder)
 before_install:
-  - docker build -safeyhalim/react-test -f ./client/Dockerfile.dev ./client
+  - docker build -t safeyhalim/react-test -f ./client/Dockerfile.dev ./client
 
 # The -e CI=true is necessary to make the command run within Travis CI 
 script:
