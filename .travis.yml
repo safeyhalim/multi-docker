@@ -1,0 +1,33 @@
+sudo: required
+services:
+  - docker
+
+# For the continous integration part, we are going to run tests for the React App only.
+# We are not doing the same for the server and the worker, just because we are lazy. The React App
+# is the only project that actually has a testing module so we are just making use of that.
+# We will build a docker image from the development Dockerfile of the React app, then run tests 
+# in the script section below. Theoretically, we can do the same with all the other projects (just
+# build a development image, then add a run line to run tests in the script section below)
+
+# Note: the build context here is ./client (because the Dockerfile.dev exists in the nested client folder)
+before_install:
+  - docker build -safeyhalim/react-test -f ./client/Dockerfile.dev ./client
+
+# Note: we are adding the -- --coverage here because npm test command doesn't exit. The -- --coverage makes sure it exits after it finishes running.
+script:
+  - docker run safeyhalim/react-test npm test -- --coverage
+
+# Continous deployment part:
+# Building production images and pushing them to Docker Hub
+after_success:
+  - docker build -t safeyhalim/multi-client ./client
+  - docker build -t safeyhalim/multi-nginx ./nginx
+  - docker build -t safeyhalim/multi-server ./server
+  - docker build -t safeyhalim/multi-worker ./worker
+  # Login to Docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # push production images to Docker Hub
+  - docker push safeyhalim/multi-client
+  - docker push safeyhalim/multi-nginx
+  - docker push safeyhalim/multi-server
+  - docker push safeyhalim/multi-worker
